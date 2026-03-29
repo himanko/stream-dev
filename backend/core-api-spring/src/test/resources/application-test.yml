@@ -1,0 +1,13 @@
+spring:
+  # This tells Spring Boot to NOT try to connect to a database during tests
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+      - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceTransactionManagerAutoConfiguration
+
+# Optional: Keep the test logs clean by hiding basic informational messages
+logging:
+  level:
+    root: WARN
+    com.funwithbackend.stream_dev: INFO

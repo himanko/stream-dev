@@ -46,9 +46,11 @@ out/
 *.pfx
 
 # If you create a separate file for your database passwords (highly recommended)
+application.yml
 application-secret.yml
 application-prod.yml
 .env
+.application.yaml
 
 # ==========================================
 # Logs & OS Files

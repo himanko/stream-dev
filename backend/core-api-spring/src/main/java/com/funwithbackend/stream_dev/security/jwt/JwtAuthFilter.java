@@ -1,5 +1,6 @@
 package com.funwithbackend.stream_dev.security.jwt;
 
+import com.funwithbackend.stream_dev.repository.UserRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -15,13 +16,16 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.Collections;
 
 @Component
 @RequiredArgsConstructor
 public class JwtAuthFilter extends OncePerRequestFilter {
 
+    private final BlacklistedTokenRepository blacklistedTokenRepository;
     private final JwtProvider jwtProvider;
+    private final UserRepository userRepository;
 
     @Override
     protected void doFilterInternal(
@@ -30,25 +34,31 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             @NonNull FilterChain filterChain
     ) throws ServletException, IOException {
 
-        // 1. Look for the "Authorization" header in the incoming request
         final String authHeader = request.getHeader("Authorization");
 
-        // 2. If there is no header, or it doesn't start with "Bearer ", just pass it along (it might be a public route)
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        // 3. Extract the token (Remove "Bearer " from the string)
         final String jwt = authHeader.substring(7);
 
-        // 4. If the token is cryptographically valid, log the user in to the Spring Security Context
+        // Blacklist Check
+        if (blacklistedTokenRepository.existsByToken(jwt)) {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.getWriter().write("Token has been blacklisted. Please log in again.");
+            return;
+        }
+
+        // Math Validation & Context Injection
         if (jwtProvider.validateToken(jwt)) {
             String email = jwtProvider.getEmailFromToken(jwt);
 
-            // Create a temporary UserDetails object so Spring knows who is making the request
+            // The Heartbeat Update
+            userRepository.updateLastActiveTime(email, LocalDateTime.now());
+
             UserDetails userDetails = User.withUsername(email)
-                    .password("") // Password isn't needed here because the token is already verified
+                    .password("")
                     .authorities(Collections.emptyList())
                     .build();
 
@@ -59,12 +69,9 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             );
 
             authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-
-            // Officially authenticate the user for this single request
             SecurityContextHolder.getContext().setAuthentication(authToken);
         }
 
-        // 5. Continue to the next step in the chain (like fetching the video)
         filterChain.doFilter(request, response);
     }
 }

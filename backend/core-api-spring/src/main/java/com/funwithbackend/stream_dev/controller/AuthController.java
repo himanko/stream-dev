@@ -4,10 +4,12 @@ import com.funwithbackend.stream_dev.dto.request.LoginRequest;
 import com.funwithbackend.stream_dev.dto.request.RegistrationRequest;
 import com.funwithbackend.stream_dev.dto.response.AuthResponse;
 import com.funwithbackend.stream_dev.service.AuthService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -15,50 +17,60 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
-// Opens the door for your React app (Create React App uses 3000, Vite uses 5173)
-@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:5173"})
 public class AuthController {
 
     private final AuthService authService;
 
-    // --- 1. REGISTRATION ENDPOINT ---
     @PostMapping("/register")
     public ResponseEntity<?> registerStudent(@Valid @RequestBody RegistrationRequest request) {
         try {
-            // Note: If you made RegistrationRequest a Java Record, change .getEmail() to .email()
-            authService.registerStudent(
-                    request.getEmail(),
-                    request.getPassword(),
-                    request.getFullName()
-            );
-
+            authService.registerStudent(request.getEmail(), request.getPassword(), request.getFullName());
             return ResponseEntity.status(HttpStatus.CREATED).body(
                     Map.of("message", "Registration successful! You can now log in.")
             );
-
         } catch (IllegalArgumentException e) {
-            // Catches the "Email already exists" error from the AuthService
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
-                    Map.of("error", e.getMessage())
-            );
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", e.getMessage()));
         }
     }
 
-    // --- 2. LOGIN ENDPOINT ---
     @PostMapping("/login")
     public ResponseEntity<?> loginStudent(@Valid @RequestBody LoginRequest request) {
+        System.out.println("🚀 [CONTROLLER] Login request received for: " + request.email());
         try {
-            // Using Java Record syntax (.email() instead of .getEmail())
-            String token = authService.authenticateStudent(request.email(), request.password());
-
-            // Returns the JWT token to the React frontend
-            return ResponseEntity.ok(new AuthResponse(token, "Login successful!"));
+            // This MUST point to authService.login(request)
+            AuthResponse response = authService.login(request);
+            System.out.println("✅ [CONTROLLER] Login successful, returning token to React.");
+            return ResponseEntity.ok(response);
 
         } catch (IllegalArgumentException e) {
-            // Generic message so attackers don't know if the email or password was wrong
+            System.out.println("❌ [CONTROLLER] Login failed: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
                     Map.of("error", "Invalid email or password")
             );
         }
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<?> logout(HttpServletRequest request, Authentication authentication) {
+        System.out.println("🚀 [CONTROLLER] Logout endpoint hit!");
+
+        if (authentication == null) {
+            System.out.println("❌ [CONTROLLER] Logout failed: Authentication is null (Bouncer blocked it)");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        String email = authentication.getName();
+        String authHeader = request.getHeader("Authorization");
+
+        System.out.println("✅ [CONTROLLER] Logout authorized for user: " + email);
+
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String jwt = authHeader.substring(7);
+            authService.logout(email, jwt);
+        } else {
+            System.out.println("⚠️ [CONTROLLER] NO VALID BEARER TOKEN FOUND IN HEADER!");
+        }
+
+        return ResponseEntity.ok(Map.of("message", "Successfully logged out."));
     }
 }

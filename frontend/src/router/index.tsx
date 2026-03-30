@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate } from "react-router-dom";
+import ProtectedRoute from "./protected-route"; // <-- 1. Import your bouncer
 
 import Index from "@/pages/index";
 import SignIn from "@/pages/sign-in";
@@ -15,22 +16,26 @@ import PaymentAndSubscription from "@/pages/payment-and-subscription";
 
 const AppRouter = () => (
   <Routes>
+    {/* 🟢 PUBLIC ROUTES */}
     <Route path="/" element={<Index />} />
     <Route path="/sign-in" element={<SignIn />} />
     <Route path="/sign-up" element={<SignUp />} />
     <Route path="/forgot-password" element={<ForgotPassword />} />
 
-    {/* Nested Profile Routes */}
-    <Route path="/profile" element={<Profile />}>
-      {/* If someone goes exactly to /profile, redirect them to personal-info */}
-      <Route index element={<Navigate to="personal-info" replace />} />
+    {/* 🔴 PROTECTED ROUTES */}
+    <Route element={<ProtectedRoute />}>
+      {/* Nested Profile Routes - Everything inside here is now secure! */}
+      <Route path="/profile" element={<Profile />}>
+        {/* If someone goes exactly to /profile, redirect them to personal-info */}
+        <Route index element={<Navigate to="personal-info" replace />} />
 
-      {/* These render inside the <Outlet /> in profile.tsx */}
-      <Route path="personal-info" element={<PersonalInfo />} />
-      <Route path="security" element={<SecurityAndSignIn />} />
-      <Route path="courses" element={<Courses />} />
-      <Route path="certificates" element={<Certificates />} />
-      <Route path="billing" element={<PaymentAndSubscription />} />
+        {/* These render inside the <Outlet /> in profile.tsx */}
+        <Route path="personal-info" element={<PersonalInfo />} />
+        <Route path="security" element={<SecurityAndSignIn />} />
+        <Route path="courses" element={<Courses />} />
+        <Route path="certificates" element={<Certificates />} />
+        <Route path="billing" element={<PaymentAndSubscription />} />
+      </Route>
     </Route>
   </Routes>
 );

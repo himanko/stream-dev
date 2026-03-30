@@ -1,4 +1,6 @@
 package com.funwithbackend.stream_dev.entity;
+import org.hibernate.annotations.CreationTimestamp;
+import java.time.LocalDateTime;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -28,6 +30,20 @@ public class User {
     // Social Login Details
     private String provider; // "GOOGLE", "FACEBOOK", "LOCAL"
     private String providerId;
+
+    // Explicit Login/Logout status
+    @Builder.Default
+    @Column(name = "is_online", nullable = false)
+    private Boolean online = false;
+
+    // The Heartbeat (Exact last action)
+    @Column(name = "last_active_at")
+    private LocalDateTime lastActiveAt;
+
+    // Automatically sets the timestamp when the user first registers
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
 
     // Security & Business logic
     private boolean isEnabled = true;

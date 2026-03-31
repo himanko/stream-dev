@@ -22,10 +22,10 @@ const AppRouter = () => (
     <Route path="/sign-in" element={<SignIn />} />
     <Route path="/sign-up" element={<SignUp />} />
     <Route path="/forgot-password" element={<ForgotPassword />} />
+    <Route path="/verify-email" element={<VerifyEmail />} />
 
     {/* 🔴 PROTECTED ROUTES */}
     <Route element={<ProtectedRoute />}>
-      <Route path="/verify-email" element={<VerifyEmail />} />
       {/* Nested Profile Routes - Everything inside here is now secure! */}
       <Route path="/profile" element={<Profile />}>
         {/* If someone goes exactly to /profile, redirect them to personal-info */}

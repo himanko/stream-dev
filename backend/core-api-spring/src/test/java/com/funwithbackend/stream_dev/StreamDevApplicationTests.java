@@ -2,16 +2,17 @@ package com.funwithbackend.stream_dev;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean; // 🚀 The new modern import!
+import org.springframework.mail.javamail.JavaMailSender;
 
 @SpringBootTest
-@ActiveProfiles("test") // Forces Spring to use the test configuration
 class StreamDevApplicationTests {
+
+    // 🚀 We use @MockitoBean for modern Spring Boot versions
+    @MockitoBean
+    private JavaMailSender javaMailSender;
 
     @Test
     void contextLoads() {
-        // This is a "Sanity Check" test.
-        // If the Spring Boot context can load all your controllers, services,
-        // and security filters without crashing, this test passes.
     }
 }

@@ -64,14 +64,10 @@ export default function SignUp() {
     setErrorMsg("");
 
     try {
-      const response = await AuthService.register(formData);
-
-      if (response.token) {
-        localStorage.setItem("authToken", response.token);
-        navigate("/verify-email");
-      } else {
-        navigate("/sign-in");
-      }
+      await AuthService.register(formData);
+      // THE FIX: Put the email securely in the URL query string instead of invisible state!
+      const safeEmail = encodeURIComponent(formData.email);
+      navigate(`/verify-email?email=${safeEmail}`);
     } catch (error: unknown) {
       if (error instanceof Error) {
         setErrorMsg(error.message);

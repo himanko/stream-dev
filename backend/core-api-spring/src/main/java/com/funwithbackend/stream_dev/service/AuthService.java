@@ -108,4 +108,34 @@ public class AuthService {
 
         System.out.println("🛑 [SERVICE] Token saved to blacklist table.");
     }
+
+    @Transactional
+    public void verifyEmail(String email, String code) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        // 1. Check if already verified
+        if (user.isEnabled()) {
+            throw new IllegalArgumentException("Account is already verified.");
+        }
+
+        // 2. Check for expired code
+        if (user.getVerificationExpiresAt().isBefore(LocalDateTime.now())) {
+            throw new IllegalArgumentException("Verification code has expired. Please request a new one.");
+        }
+
+        // 3. Check if the code matches
+        if (!user.getVerificationCode().equals(code)) {
+            throw new IllegalArgumentException("Invalid verification code.");
+        }
+
+        // 4. Success! Unlock the account and erase the code for security
+        user.setEnabled(true);
+        user.setVerificationCode(null);
+        user.setVerificationExpiresAt(null);
+
+        userRepository.save(user);
+
+        System.out.println("🔓 [SERVICE] User " + email + " successfully verified and unlocked!");
+    }
 }

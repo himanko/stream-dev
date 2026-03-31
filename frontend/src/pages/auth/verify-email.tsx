@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate, useLocation, Link } from "react-router-dom";
+import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -14,10 +14,10 @@ import { AlertCircle, ArrowLeft, MailCheck } from "lucide-react";
 
 export default function VerifyEmail() {
   const navigate = useNavigate();
-  const location = useLocation();
 
-  // Grab the email passed from the Sign-Up page state
-  const email = location.state?.email;
+  // 2. THE FIX: Grab the email directly from the URL (e.g., ?email=test@test.com)
+  const [searchParams] = useSearchParams();
+  const email = searchParams.get("email");
 
   const [code, setCode] = useState(["", "", "", "", "", ""]);
   const [isLoading, setIsLoading] = useState(false);
@@ -26,7 +26,7 @@ export default function VerifyEmail() {
   // Refs to manage the 6 input boxes
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
-  // Security: If no email is present in state, kick them back to sign-up
+  // 2. Security: If no email is present in state, kick them back to sign-up
   useEffect(() => {
     if (!email) {
       navigate("/sign-up");
@@ -85,16 +85,16 @@ export default function VerifyEmail() {
     setErrorMsg("");
 
     try {
-      // 1. Call your Spring Boot /api/auth/verify endpoint
-      const response = await AuthService.verifyEmail(email, fullCode);
+      // 3. Call your Spring Boot /api/auth/verify endpoint
+      await AuthService.verifyEmail(email, fullCode);
 
-      // 2. If Spring returns a token (Auto-Login), save it!
-      if (response.token) {
-        localStorage.setItem("authToken", response.token);
-      }
-
-      // 3. Success! Send them to the protected dashboard
-      navigate("/profile");
+      // 4. THE FIX: Success! Send them to the Sign-In page to officially log in.
+      // We pass a state message so the Sign-In page can show a nice "Success" banner!
+      navigate("/sign-in", {
+        state: {
+          message: "Account verified successfully! Please log in to continue.",
+        },
+      });
     } catch (error: unknown) {
       if (error instanceof Error) {
         setErrorMsg(error.message);

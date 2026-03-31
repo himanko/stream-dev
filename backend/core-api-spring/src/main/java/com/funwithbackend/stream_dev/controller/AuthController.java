@@ -2,6 +2,7 @@ package com.funwithbackend.stream_dev.controller;
 
 import com.funwithbackend.stream_dev.dto.request.LoginRequest;
 import com.funwithbackend.stream_dev.dto.request.RegistrationRequest;
+import  com.funwithbackend.stream_dev.dto.request.VerifyRequest;
 import com.funwithbackend.stream_dev.dto.response.AuthResponse;
 import com.funwithbackend.stream_dev.service.AuthService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -48,6 +49,14 @@ public class AuthController {
                     Map.of("error", "Invalid email or password")
             );
         }
+    }
+
+    @PostMapping("/verify")
+    public ResponseEntity<AuthResponse> verifyEmail(@RequestBody VerifyRequest request) {
+        authService.verifyEmail(request.email(), request.code());
+
+        // We don't send a token here either! We force them to officially log in now.
+        return ResponseEntity.ok(new AuthResponse("null", "Email verified successfully! You can now log in."));
     }
 
     @PostMapping("/logout")

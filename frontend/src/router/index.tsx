@@ -5,6 +5,7 @@ import Index from "@/pages/index";
 import SignIn from "@/pages/sign-in";
 import SignUp from "@/pages/sign-up";
 import ForgotPassword from "@/pages/forgot-password";
+import VerifyEmail from "@/pages/auth/verify-email";
 
 // Profile Layout & Pages
 import Profile from "@/pages/profile";
@@ -24,6 +25,7 @@ const AppRouter = () => (
 
     {/* 🔴 PROTECTED ROUTES */}
     <Route element={<ProtectedRoute />}>
+      <Route path="/verify-email" element={<VerifyEmail />} />
       {/* Nested Profile Routes - Everything inside here is now secure! */}
       <Route path="/profile" element={<Profile />}>
         {/* If someone goes exactly to /profile, redirect them to personal-info */}

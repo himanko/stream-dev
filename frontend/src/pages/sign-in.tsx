@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FaGoogle, FaApple, FaGithub } from "react-icons/fa";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,10 +12,18 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Link, useNavigate } from "react-router-dom";
-import { AuthService } from "@/services/auth.service"; // Import the service!
+import { AuthService } from "@/services/auth.service";
 
 export default function SignIn() {
   const navigate = useNavigate();
+
+  // --- REVERSE BOUNCER ---
+  useEffect(() => {
+    const token = localStorage.getItem("authToken");
+    if (token) {
+      navigate("/profile");
+    }
+  }, [navigate]);
 
   // UI State
   const [isLoading, setIsLoading] = useState(false);
@@ -27,28 +35,23 @@ export default function SignIn() {
     password: "",
   });
 
-  // Handle input changes dynamically
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.id]: e.target.value });
   };
 
-  // The Submit Handler
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setErrorMsg("");
 
     try {
-      // 1. Send credentials to Spring Boot
       const response = await AuthService.login(formData);
 
-      // 2. If successful, save the JWT token to local storage
       if (response.token) {
         localStorage.setItem("authToken", response.token);
       }
 
-      // 3. Send them to the dashboard or home page!
-      navigate("/");
+      navigate("/profile");
     } catch (error: unknown) {
       if (error instanceof Error) {
         setErrorMsg(error.message);
@@ -73,7 +76,6 @@ export default function SignIn() {
         </CardHeader>
 
         <CardContent className="space-y-4">
-          {/* Global Error Banner */}
           {errorMsg && (
             <div className="p-3 bg-red-100 text-red-600 rounded-md text-sm font-medium border border-red-200">
               {errorMsg}
@@ -119,7 +121,6 @@ export default function SignIn() {
             </div>
           </div>
 
-          {/* Standard Login Form connected to handleSubmit */}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>

@@ -4,7 +4,9 @@ import com.funwithbackend.stream_dev.dto.request.LoginRequest;
 import com.funwithbackend.stream_dev.dto.response.AuthResponse;
 import com.funwithbackend.stream_dev.entity.Role;
 import com.funwithbackend.stream_dev.entity.User;
+import com.funwithbackend.stream_dev.entity.UserProfile;
 import com.funwithbackend.stream_dev.repository.UserRepository;
+import com.funwithbackend.stream_dev.repository.UserProfileRepository;
 import com.funwithbackend.stream_dev.security.jwt.BlacklistedToken;
 import com.funwithbackend.stream_dev.security.jwt.BlacklistedTokenRepository;
 import com.funwithbackend.stream_dev.security.jwt.JwtProvider;
@@ -12,6 +14,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.context.ApplicationEventPublisher;
+import com.funwithbackend.stream_dev.event.UserRegisteredEvent;
+import java.util.Random;
 
 import java.time.LocalDateTime;
 
@@ -23,6 +28,9 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtProvider jwtProvider;
     private final BlacklistedTokenRepository blacklistedTokenRepository;
+    private final UserProfileRepository userProfileRepository;
+    private final ApplicationEventPublisher eventPublisher;
+
 
     @Transactional
     public void registerStudent(String email, String password, String name) {
@@ -30,18 +38,33 @@ public class AuthService {
             throw new IllegalArgumentException("Email already exists!");
         }
 
+        // 1. Generate the 6-digit code (This was missing!)
+        String randomCode = String.format("%06d", new Random().nextInt(999999));
+
         User user = User.builder()
                 .email(email)
                 .password(passwordEncoder.encode(password))
                 .fullName(name)
                 .role(Role.ROLE_STUDENT)
                 .provider("LOCAL")
-                .isEnabled(true)
+                .isEnabled(false) // 🔒 Account locked until verified
                 .isPremium(false)
                 .online(false)
+                .verificationCode(randomCode) // Save the code
+                .verificationExpiresAt(LocalDateTime.now().plusMinutes(15)) // Expires in 15 mins
                 .build();
 
-        userRepository.save(user);
+        User savedUser = userRepository.save(user);
+
+        UserProfile blankProfile = UserProfile.builder().user(savedUser).build();
+        userProfileRepository.save(blankProfile);
+
+        System.out.println("📢 [MAIN THREAD] Publishing email event for: " + email);
+
+        // 2. This will now work because of the new imports
+        eventPublisher.publishEvent(new UserRegisteredEvent(email, randomCode));
+
+        System.out.println("🏁 [MAIN THREAD] Registration method finished!");
     }
 
     @Transactional

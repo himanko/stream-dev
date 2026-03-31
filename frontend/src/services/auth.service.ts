@@ -6,7 +6,7 @@ export interface LoginRequest {
   password: string;
 }
 
-// The exact shape of the data we will send to your Java Spring Boot backend
+// The exact shape of the data we send to your Java Spring Boot backend
 export interface RegisterRequest {
   fullName: string;
   email: string;
@@ -26,11 +26,9 @@ export interface AuthResponse {
 export const AuthService = {
   register: async (data: RegisterRequest): Promise<AuthResponse> => {
     try {
-      // Sends the POST request to http://localhost:8080/api/auth/register
       const response = await api.post<AuthResponse>("/auth/register", data);
       return response.data;
     } catch (error: unknown) {
-      // Handle strict TypeScript errors cleanly
       if (axios.isAxiosError(error)) {
         throw new Error(
           error.response?.data?.error ||
@@ -38,18 +36,14 @@ export const AuthService = {
             "Registration failed. Please try again.",
         );
       }
-
-      // Fallback for network crashes
       throw new Error(
         "An unexpected error occurred. Please check your connection.",
       );
     }
   },
 
-  // ADD THIS LOGIN FUNCTION:
   login: async (data: LoginRequest): Promise<AuthResponse> => {
     try {
-      // Assuming your Spring Boot login endpoint is /auth/login (or /auth/authenticate)
       const response = await api.post<AuthResponse>("/auth/login", data);
       return response.data;
     } catch (error: unknown) {
@@ -68,26 +62,32 @@ export const AuthService = {
 
   logout: async () => {
     try {
-      // 1. Grab the token you saved during login
-      const token = localStorage.getItem("token");
-
-      // 2. Send the logout request WITH the token in the header
-      await api.post(
-        "/auth/logout",
-        {},
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
-
-      // 3. Delete the token from the browser so the user is truly logged out
-      localStorage.removeItem("token");
+      // We no longer need to manually attach the token to the headers here.
+      // Your Axios interceptor (in api.ts) automatically attaches it for us!
+      await api.post("/auth/logout");
     } catch (error) {
       console.error("Error logging out", error);
-      // Even if the server fails, we should still clear the browser's token
-      localStorage.removeItem("token");
+    } finally {
+      // CRITICAL: We use a finally block to guarantee the token is deleted from the browser,
+      // even if the backend server is temporarily down or throws an error.
+      localStorage.removeItem("authToken");
+    }
+  },
+
+  verifyEmail: async (email: string, code: string): Promise<AuthResponse> => {
+    try {
+      const response = await api.post<AuthResponse>("/auth/verify", {
+        email,
+        code,
+      });
+      return response.data;
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        throw new Error(
+          error.response?.data?.message || "Invalid verification code.",
+        );
+      }
+      throw new Error("An unexpected error occurred.");
     }
   },
 };

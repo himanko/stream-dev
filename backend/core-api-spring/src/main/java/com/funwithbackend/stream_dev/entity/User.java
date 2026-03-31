@@ -36,6 +36,10 @@ public class User {
     @Column(name = "is_online", nullable = false)
     private Boolean online = false;
 
+    // --- Verification Fields ---
+    private String verificationCode;
+    private LocalDateTime verificationExpiresAt;
+
     // The Heartbeat (Exact last action)
     @Column(name = "last_active_at")
     private LocalDateTime lastActiveAt;

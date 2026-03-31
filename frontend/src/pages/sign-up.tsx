@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FaGoogle, FaApple, FaGithub } from "react-icons/fa";
 import { Eye, EyeOff, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,14 @@ import { AuthService } from "@/services/auth.service";
 export default function SignUp() {
   const navigate = useNavigate();
 
+  // --- REVERSE BOUNCER ---
+  useEffect(() => {
+    const token = localStorage.getItem("authToken");
+    if (token) {
+      navigate("/profile");
+    }
+  }, [navigate]);
+
   // UI State
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -30,12 +38,10 @@ export default function SignUp() {
     password: "",
   });
 
-  // Handle input changes dynamically
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.id]: e.target.value });
   };
 
-  // Live validation checks for the password
   const passwordRequirements = [
     { text: "At least 8 characters", met: formData.password.length >= 8 },
     { text: "Contains a number", met: /\d/.test(formData.password) },
@@ -45,37 +51,34 @@ export default function SignUp() {
     },
   ];
 
-  // The Submit Handler
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // 1. Validate password before hitting the server
     const isPasswordValid = passwordRequirements.every((req) => req.met);
     if (!isPasswordValid) {
       setErrorMsg("Please ensure your password meets all requirements.");
       return;
     }
 
-    // 2. Lock the UI
     setIsLoading(true);
     setErrorMsg("");
 
     try {
-      // 3. Send the exact formData object to the backend
       const response = await AuthService.register(formData);
-      console.log("Registration Successful!", response);
 
-      // 4. Redirect the user to log in
-      navigate("/profile");
+      if (response.token) {
+        localStorage.setItem("authToken", response.token);
+        navigate("/verify-email");
+      } else {
+        navigate("/sign-in");
+      }
     } catch (error: unknown) {
-      // 5. Handle any errors from Spring Boot
       if (error instanceof Error) {
         setErrorMsg(error.message);
       } else {
         setErrorMsg("An unexpected error occurred.");
       }
     } finally {
-      // 6. Unlock the UI
       setIsLoading(false);
     }
   };
@@ -93,7 +96,6 @@ export default function SignUp() {
         </CardHeader>
 
         <CardContent className="space-y-4">
-          {/* Global Error Banner */}
           {errorMsg && (
             <div className="p-3 bg-red-100 text-red-600 rounded-md text-sm font-medium border border-red-200">
               {errorMsg}
@@ -106,6 +108,7 @@ export default function SignUp() {
               variant="outline"
               type="button"
               aria-label="Sign up with Google"
+              disabled={isLoading}
             >
               <FaGoogle className="h-4 w-4" />
             </Button>
@@ -113,6 +116,7 @@ export default function SignUp() {
               variant="outline"
               type="button"
               aria-label="Sign up with Apple"
+              disabled={isLoading}
             >
               <FaApple className="h-4 w-4" />
             </Button>
@@ -120,6 +124,7 @@ export default function SignUp() {
               variant="outline"
               type="button"
               aria-label="Sign up with Github"
+              disabled={isLoading}
             >
               <FaGithub className="h-4 w-4" />
             </Button>
@@ -136,7 +141,6 @@ export default function SignUp() {
             </div>
           </div>
 
-          {/* Registration Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="fullName">Full Name</Label>
@@ -189,7 +193,6 @@ export default function SignUp() {
                 </button>
               </div>
 
-              {/* Live Requirements Checklist */}
               <div className="flex flex-col gap-1.5 mt-2">
                 {passwordRequirements.map((req, index) => (
                   <div key={index} className="flex items-center gap-2 text-xs">

@@ -1,6 +1,7 @@
 package com.funwithbackend.stream_dev.controller;
 
 import com.funwithbackend.stream_dev.entity.UserProfile;
+import com.funwithbackend.stream_dev.dto.response.UserProfileResponse; // <-- Added the DTO import
 import com.funwithbackend.stream_dev.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -20,12 +21,13 @@ public class UserController {
     // The frontend calls GET /api/profiles/me
     @GetMapping("/me")
     public ResponseEntity<?> getMyProfile(Authentication authentication) {
-        // If the request makes it past your JwtAuthFilter, authentication is guaranteed to be valid
+        // If the request makes it past your JwtAuthFilter, authentication is valid
         String email = authentication.getName();
 
         try {
-            UserProfile profile = userService.getStudentProfile(email);
-            return ResponseEntity.ok(profile);
+            // Changed to UserProfileResponse DTO
+            UserProfileResponse profileResponse = userService.getStudentProfile(email);
+            return ResponseEntity.ok(profileResponse);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
@@ -38,8 +40,9 @@ public class UserController {
         String email = authentication.getName();
 
         try {
-            UserProfile savedProfile = userService.updateProfile(email, updatedData);
-            return ResponseEntity.ok(savedProfile);
+            // Changed to UserProfileResponse DTO
+            UserProfileResponse updatedProfileResponse = userService.updateProfile(email, updatedData);
+            return ResponseEntity.ok(updatedProfileResponse);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }

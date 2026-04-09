@@ -2,11 +2,24 @@ import { api } from "./api";
 import axios from "axios";
 
 export interface UserProfile {
-  id: string;
+  id?: string;
+  username: string; // ADDED
+  email: string; // ADDED
   fullName: string;
-  email: string;
-  role?: string;
+  headline?: string; // ADDED
+  location?: string; // ADDED
+  preferredLanguage?: string; // ADDED
+  bio?: string;
+  portfolioUrl?: string; // ADDED
+  githubUrl?: string;
+  linkedinUrl?: string;
+  twitterUrl?: string;
+  instagramUrl?: string;
+  facebookUrl?: string;
+  isPublicProfile?: boolean; // ADDED
   isPremium?: boolean;
+  isOnline?: boolean; // ADDED
+  lastActiveAt?: string; // ADDED (Spring sends dates as ISO strings)
 }
 
 export const UserService = {

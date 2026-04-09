@@ -30,7 +30,13 @@ public class UserProfile {
     @Column(length = 160)
     private String bio;
 
+    // --- Demographics ---
+    // Public: What everyone sees (e.g., "Assam, India")
     private String location;
+
+    // Private: The exact street address or GPS coordinates.
+    // This NEVER goes into the UserProfileResponse DTO.
+    private String exactAddress;
     private String preferredLanguage; // e.g., "Java", "C++", or "Both"
 
     // --- Social Links ---

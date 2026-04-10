@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import ProtectedRoute from "./protected-route"; // <-- 1. Import your bouncer
+import TutorRoutes from "./tutor-routes"; // <-- 2. Import the tutor routes
 
 import Index from "@/pages/index";
 import SignIn from "@/pages/sign-in";
@@ -39,6 +40,16 @@ const AppRouter = () => (
         <Route path="billing" element={<PaymentAndSubscription />} />
       </Route>
     </Route>
+    {/* Tutor Protected Routes 
+        The /* is crucial! It tells React Router to pass routing control down to tutor-routes.tsx*/}
+    <Route
+      path="/tutor/*"
+      element={
+        <ProtectedRoute allowedRoles={["TUTOR", "ADMIN"]}>
+          <TutorRoutes />
+        </ProtectedRoute>
+      }
+    />
   </Routes>
 );
 

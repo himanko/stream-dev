@@ -1,15 +1,40 @@
-import { Navigate, Outlet } from "react-router-dom";
+import { Navigate, Outlet, useLocation } from "react-router-dom";
+import { useAuth } from "@/hooks/use-auth";
 
-export default function ProtectedRoute() {
-  // 1. Check if the user has a VIP pass (the JWT token)
-  const token = localStorage.getItem("authToken");
+interface ProtectedRouteProps {
+  children?: React.ReactNode;
+  allowedRoles?: string[];
+}
 
-  // 2. If they don't have a token, instantly redirect them to login.
-  // The 'replace' prop ensures they can't hit the "Back" button to bypass this.
-  if (!token) {
-    return <Navigate to="/sign-in" replace />;
+export default function ProtectedRoute({
+  children,
+  allowedRoles,
+}: ProtectedRouteProps) {
+  // We only care about `user` and `isLoading` now
+  const { user, isLoading } = useAuth();
+  const location = useLocation();
+
+  // 1. Wait for the backend /me check to finish
+  if (isLoading) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center">
+        <span className="animate-pulse text-sm font-medium text-zinc-500">
+          Verifying secure session...
+        </span>
+      </div>
+    );
   }
 
-  // 3. If they do have a token, render the protected page they asked for
-  return <Outlet />;
+  // 2. Not Authenticated? Boot them to login.
+  if (!user) {
+    return <Navigate to="/sign-in" state={{ from: location }} replace />;
+  }
+
+  // 3. Role-Based Access Control (RBAC)
+  if (allowedRoles && !allowedRoles.includes(user.role)) {
+    return <Navigate to="/" replace />;
+  }
+
+  // 4. Access Granted!
+  return children ? <>{children}</> : <Outlet />;
 }

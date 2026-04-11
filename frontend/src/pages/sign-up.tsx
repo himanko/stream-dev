@@ -14,17 +14,19 @@ import {
 } from "@/components/ui/card";
 import { Link, useNavigate } from "react-router-dom";
 import { AuthService } from "@/services/auth.service";
+import { useAuth } from "@/hooks/use-auth"; // <-- 1. Import your auth hook
 
 export default function SignUp() {
   const navigate = useNavigate();
+  const { user } = useAuth(); // <-- 2. Pull user state
 
   // --- REVERSE BOUNCER ---
   useEffect(() => {
-    const token = localStorage.getItem("authToken");
-    if (token) {
-      navigate("/profile");
+    // Rely on global state, not localStorage
+    if (user) {
+      navigate("/profile", { replace: true });
     }
-  }, [navigate]);
+  }, [user, navigate]);
 
   // UI State
   const [showPassword, setShowPassword] = useState(false);
@@ -65,7 +67,6 @@ export default function SignUp() {
 
     try {
       await AuthService.register(formData);
-      // THE FIX: Put the email securely in the URL query string instead of invisible state!
       const safeEmail = encodeURIComponent(formData.email);
       navigate(`/verify-email?email=${safeEmail}`);
     } catch (error: unknown) {

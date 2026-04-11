@@ -14,15 +14,14 @@ public class ClearSessionFilter extends AbstractGatewayFilterFactory<ClearSessio
         super(Config.class);
     }
 
+
     @Override
     public GatewayFilter apply(Config config) {
         return (exchange, chain) -> {
-            // Let the request go to the Core API first (so it can blacklist the token)
-            return chain.filter(exchange).then(Mono.defer(() ->
-                    // When the response comes back, destroy the Redis session!
-                    // Spring Session will automatically tell React to delete the cookie.
-                    exchange.getSession().flatMap(WebSession::invalidate)
-            ));
+            exchange.getResponse().beforeCommit(() ->
+                    exchange.getSession().flatMap(org.springframework.web.server.WebSession::invalidate)
+            );
+            return chain.filter(exchange);
         };
     }
 

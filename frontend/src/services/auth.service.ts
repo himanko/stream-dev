@@ -1,26 +1,22 @@
 import axios from "axios";
 import { api } from "./api";
+import type { User } from "@/hooks/use-auth"; // <-- Just add the word 'type'!
 
 export interface LoginRequest {
   email: string;
   password: string;
 }
 
-// The exact shape of the data we send to your Java Spring Boot backend
 export interface RegisterRequest {
   fullName: string;
   email: string;
   password: string;
 }
 
-// What we expect Spring Boot to send back on success
+// 2. Updated to use the strict User type
 export interface AuthResponse {
   message: string;
-  token?: string;
-  user?: {
-    id: string;
-    email: string;
-  };
+  user?: User; // <-- TypeScript now knows this includes name and role!
 }
 
 export const AuthService = {
@@ -62,16 +58,13 @@ export const AuthService = {
 
   logout: async () => {
     try {
-      // We no longer need to manually attach the token to the headers here.
-      // Your Axios interceptor (in api.ts) automatically attaches it for us!
+      // The browser automatically sends the secure cookie to verify who is logging out.
       await api.post("/auth/logout");
     } catch (error) {
       console.error("Error logging out", error);
-    } finally {
-      // CRITICAL: We use a finally block to guarantee the token is deleted from the browser,
-      // even if the backend server is temporarily down or throws an error.
-      localStorage.removeItem("authToken");
     }
+    // 3. Removed the localStorage.removeItem block!
+    // State clearing and redirects are now handled beautifully by your useAuth hook.
   },
 
   verifyEmail: async (email: string, code: string): Promise<AuthResponse> => {

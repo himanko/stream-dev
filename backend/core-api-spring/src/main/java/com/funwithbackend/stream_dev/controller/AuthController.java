@@ -38,10 +38,21 @@ public class AuthController {
     public ResponseEntity<?> loginStudent(@Valid @RequestBody LoginRequest request) {
         System.out.println("🚀 [CONTROLLER] Login request received for: " + request.email());
         try {
-            // This MUST point to authService.login(request)
+            // 1. Authenticate user using your existing service
             AuthResponse response = authService.login(request);
-            System.out.println("✅ [CONTROLLER] Login successful, returning token to React.");
-            return ResponseEntity.ok(response);
+
+            // Extract the token (Assuming AuthResponse is a record, use .token(), if it's a class use .getToken())
+            String jwt = response.token();
+
+            System.out.println("✅ [CONTROLLER] Login successful, passing token to Gateway Header.");
+
+            // 2. THE BFF HANDSHAKE: Put the JWT in the Header, NOT the body
+            return ResponseEntity.ok()
+                    .header(org.springframework.http.HttpHeaders.AUTHORIZATION, "Bearer " + jwt)
+                    .body(Map.of(
+                            "status", "success",
+                            "message", "Logged in successfully"
+                    ));
 
         } catch (IllegalArgumentException e) {
             System.out.println("❌ [CONTROLLER] Login failed: " + e.getMessage());
@@ -81,5 +92,21 @@ public class AuthController {
         }
 
         return ResponseEntity.ok(Map.of("message", "Successfully logged out."));
+    }
+
+
+    @GetMapping("/me")
+    public ResponseEntity<?> getCurrentUser(Authentication authentication) {
+        // 1. If there is no token (or invalid token), return 401
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Not authenticated"));
+        }
+
+        // 2. If the Gateway successfully attached the token, return the user info!
+        return ResponseEntity.ok(Map.of(
+                "email", authentication.getName(),
+                // Safely grab the first role/authority the user has
+                "role", authentication.getAuthorities().iterator().next().getAuthority()
+        ));
     }
 }

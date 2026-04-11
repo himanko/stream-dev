@@ -15,7 +15,7 @@ import { AlertCircle, ArrowLeft, MailCheck } from "lucide-react";
 export default function VerifyEmail() {
   const navigate = useNavigate();
 
-  // 2. THE FIX: Grab the email directly from the URL (e.g., ?email=test@test.com)
+  // Grab the email directly from the URL (e.g., ?email=test@test.com)
   const [searchParams] = useSearchParams();
   const email = searchParams.get("email");
 
@@ -26,10 +26,10 @@ export default function VerifyEmail() {
   // Refs to manage the 6 input boxes
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
-  // 2. Security: If no email is present in state, kick them back to sign-up
+  // Security: If no email is present in state, kick them back to sign-up
   useEffect(() => {
     if (!email) {
-      navigate("/sign-up");
+      navigate("/sign-up", { replace: true });
     }
   }, [email, navigate]);
 
@@ -56,6 +56,7 @@ export default function VerifyEmail() {
 
   // Handle Pasting the full 6-digit code
   const handlePaste = (e: React.ClipboardEvent) => {
+    e.preventDefault(); // Prevent default paste behavior
     const pastedData = e.clipboardData.getData("text").slice(0, 6);
     if (!/^\d+$/.test(pastedData)) return;
 
@@ -76,6 +77,12 @@ export default function VerifyEmail() {
     e.preventDefault();
     const fullCode = code.join("");
 
+    // --- THE FIX: Prove to TypeScript that 'email' exists ---
+    if (!email) {
+      setErrorMsg("Missing email address. Please return to sign up.");
+      return;
+    }
+
     if (fullCode.length !== 6) {
       setErrorMsg("Please enter all 6 digits.");
       return;
@@ -85,16 +92,11 @@ export default function VerifyEmail() {
     setErrorMsg("");
 
     try {
-      // 3. Call your Spring Boot /api/auth/verify endpoint
+      // Call your Spring Boot /api/auth/verify endpoint
       await AuthService.verifyEmail(email, fullCode);
 
-      // 4. THE FIX: Success! Send them to the Sign-In page to officially log in.
-      // We pass a state message so the Sign-In page can show a nice "Success" banner!
-      navigate("/sign-in", {
-        state: {
-          message: "Account verified successfully! Please log in to continue.",
-        },
-      });
+      // Success! Route them to the new Welcome page.
+      navigate("/welcome", { replace: true });
     } catch (error: unknown) {
       if (error instanceof Error) {
         setErrorMsg(error.message);
@@ -108,7 +110,7 @@ export default function VerifyEmail() {
 
   return (
     <div className="flex min-h-[80vh] items-center justify-center px-4">
-      <Card className="w-full max-w-md border-zinc-200 dark:border-zinc-800 bg-white/50 dark:bg-zinc-950/50 backdrop-blur-xl shadow-2xl">
+      <Card className="w-full max-w-md border-zinc-200 dark:border-zinc-800 bg-white/50 dark:bg-zinc-950/50 backdrop-blur-xl shadow-2xl animate-in fade-in zoom-in-95 duration-300">
         <CardHeader className="text-center space-y-2">
           <div className="mx-auto bg-brand/10 w-12 h-12 rounded-full flex items-center justify-center mb-2">
             <MailCheck className="h-6 w-6 text-brand" />
@@ -126,17 +128,21 @@ export default function VerifyEmail() {
 
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="flex justify-between gap-2" onPaste={handlePaste}>
+            <div className="flex justify-between gap-2">
               {code.map((num, idx) => (
                 <input
                   key={idx}
-                  ref={(el) => (inputRefs.current[idx] = el)}
+                  // --- THE FIX: Wrap the assignment in curly braces so it returns void ---
+                  ref={(el) => {
+                    inputRefs.current[idx] = el;
+                  }}
                   type="text"
                   inputMode="numeric"
                   maxLength={1}
                   value={num}
                   onChange={(e) => handleChange(idx, e.target.value)}
                   onKeyDown={(e) => handleKeyDown(idx, e)}
+                  onPaste={idx === 0 ? handlePaste : undefined}
                   disabled={isLoading}
                   className="w-full h-14 text-center text-2xl font-bold border rounded-lg bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 focus:ring-2 focus:ring-brand focus:border-brand outline-none transition-all disabled:opacity-50"
                 />
@@ -145,13 +151,13 @@ export default function VerifyEmail() {
 
             {errorMsg && (
               <div className="p-3 bg-red-100 text-red-600 rounded-md text-sm flex items-center gap-2 border border-red-200">
-                <AlertCircle className="h-4 w-4" /> {errorMsg}
+                <AlertCircle className="h-4 w-4 shrink-0" /> {errorMsg}
               </div>
             )}
 
             <Button
               type="submit"
-              className="w-full h-11 bg-brand hover:bg-brand/90 text-white font-semibold"
+              className="w-full h-11 bg-brand hover:bg-brand/90 text-black dark:text-white font-semibold"
               disabled={isLoading || code.includes("")}
             >
               {isLoading ? "Verifying..." : "Verify Account"}
@@ -162,7 +168,10 @@ export default function VerifyEmail() {
         <CardFooter className="flex flex-col gap-4 border-t border-zinc-100 dark:border-zinc-800 pt-6">
           <p className="text-sm text-zinc-500 text-center">
             Didn't receive the code?{" "}
-            <button className="text-brand font-semibold hover:underline">
+            <button
+              className="text-brand font-semibold hover:underline"
+              disabled={isLoading}
+            >
               Resend code
             </button>
           </p>

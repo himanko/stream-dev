@@ -7,6 +7,7 @@ import SignIn from "@/pages/sign-in";
 import SignUp from "@/pages/sign-up";
 import ForgotPassword from "@/pages/forgot-password";
 import VerifyEmail from "@/pages/auth/verify-email";
+import Welcome from "@/pages/auth/welcome";
 
 // Profile Layout & Pages
 import Profile from "@/pages/profile";
@@ -24,6 +25,7 @@ const AppRouter = () => (
     <Route path="/sign-up" element={<SignUp />} />
     <Route path="/forgot-password" element={<ForgotPassword />} />
     <Route path="/verify-email" element={<VerifyEmail />} />
+    <Route path="/welcome" element={<Welcome />} />
 
     {/* 🔴 PROTECTED ROUTES */}
     <Route element={<ProtectedRoute />}>

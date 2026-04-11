@@ -11,19 +11,23 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { AuthService } from "@/services/auth.service";
+import { useAuth } from "@/hooks/use-auth";
+import { api } from "@/services/api"; // <-- ADDED: We need this to fetch the user profile
 
 export default function SignIn() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { user, login } = useAuth();
 
   // --- REVERSE BOUNCER ---
   useEffect(() => {
-    const token = localStorage.getItem("authToken");
-    if (token) {
-      navigate("/profile");
+    if (user) {
+      const destination = location.state?.from?.pathname || "/profile";
+      navigate(destination, { replace: true });
     }
-  }, [navigate]);
+  }, [user, navigate, location]);
 
   // UI State
   const [isLoading, setIsLoading] = useState(false);
@@ -45,21 +49,23 @@ export default function SignIn() {
     setErrorMsg("");
 
     try {
-      const response = await AuthService.login(formData);
+      // 1. Send credentials. The Gateway intercepts the JWT and gives the browser a Cookie.
+      await AuthService.login(formData);
 
-      if (response.token) {
-        localStorage.setItem("authToken", response.token);
-      }
+      // 2. Fetch the user details using that brand new cookie!
+      const userResponse = await api.get("/auth/me");
 
-      navigate("/profile");
+      // 3. Update the global React state with the user data
+      login(userResponse.data);
+
+      // The useEffect reverse-bouncer at the top will now automatically trigger and navigate them to /profile!
     } catch (error: unknown) {
       if (error instanceof Error) {
         setErrorMsg(error.message);
       } else {
         setErrorMsg("An unexpected error occurred.");
       }
-    } finally {
-      setIsLoading(false);
+      setIsLoading(false); // Only stop loading if there's an error
     }
   };
 

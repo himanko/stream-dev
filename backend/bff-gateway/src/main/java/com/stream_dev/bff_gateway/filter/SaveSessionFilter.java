@@ -15,27 +15,28 @@ public class SaveSessionFilter extends AbstractGatewayFilterFactory<SaveSessionF
 
     @Override
     public GatewayFilter apply(Config config) {
-        return (exchange, chain) -> exchange.getSession().flatMap(session ->
-                // 1. Let the request pass to the Core API
-                chain.filter(exchange).then(Mono.defer(() -> {
+        return (exchange, chain) -> exchange.getSession().flatMap(session -> {
 
-                    // 2. When the response comes BACK, check for the Authorization header
-                    String authHeader = exchange.getResponse().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
+            // THE FIX: Pause the response BEFORE it gets sent back to React
+            exchange.getResponse().beforeCommit(() -> {
+                String authHeader = exchange.getResponse().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
 
-                    if (authHeader != null && authHeader.startsWith("Bearer ")) {
-                        // 3. Extract the JWT and save it to Redis
-                        String token = authHeader.substring(7);
-                        session.getAttributes().put("JWT_TOKEN", token);
+                if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                    String token = authHeader.substring(7);
+                    session.getAttributes().put("JWT_TOKEN", token);
 
-                        // 4. STRIP the header! (React must never see this)
-                        exchange.getResponse().getHeaders().remove(HttpHeaders.AUTHORIZATION);
+                    // Hide the token from the browser
+                    exchange.getResponse().getHeaders().remove(HttpHeaders.AUTHORIZATION);
 
-                        // 5. Save the session (This triggers the Set-Cookie for React)
-                        return session.save();
-                    }
-                    return Mono.empty();
-                }))
-        );
+                    // Save the session (This is what actually generates the Set-Cookie header!)
+                    return session.save();
+                }
+                return Mono.empty();
+            });
+
+            // Continue sending the request to the Core API
+            return chain.filter(exchange);
+        });
     }
 
     public static class Config {}

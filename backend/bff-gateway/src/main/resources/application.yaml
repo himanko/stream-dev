@@ -1,0 +1,47 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: bff-gateway
+  data:
+    redis:
+      host: localhost
+      port: 6379
+  session:
+    store-type: redis
+    timeout: 30d  # <-- Tells Redis: "Do not delete this user's session for 30 days"
+  cloud:
+    gateway:
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOrigins: "http://localhost:3000"
+            allowedMethods: "*"
+            allowedHeaders: "*"
+            allowCredentials: true # Crucial for HttpOnly Cookies
+      routes:
+        # ROUTE 1: The Login Route
+        - id: auth-login-route
+          uri: http://localhost:8081
+          predicates:
+            - Path=/api/auth/login
+          filters:
+            - SaveSessionFilter
+
+        # ROUTE 2: The Logout Route (NEW)
+        - id: auth-logout-route
+          uri: http://localhost:8081
+          predicates:
+            - Path=/api/auth/logout
+          filters:
+            - TokenRelayFilter   # 1st: Grab token from Redis and send to Core API
+            - ClearSessionFilter # 2nd: Destroy the session when it comes back
+
+        # ROUTE 3: Every other API call (Profile, Videos, etc.)
+        - id: core-api-route
+          uri: http://localhost:8081
+          predicates:
+            - Path=/api/**
+          filters:
+            - TokenRelayFilter

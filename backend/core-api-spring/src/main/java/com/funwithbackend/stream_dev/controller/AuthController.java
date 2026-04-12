@@ -2,7 +2,7 @@ package com.funwithbackend.stream_dev.controller;
 
 import com.funwithbackend.stream_dev.dto.request.LoginRequest;
 import com.funwithbackend.stream_dev.dto.request.RegistrationRequest;
-import  com.funwithbackend.stream_dev.dto.request.VerifyRequest;
+import com.funwithbackend.stream_dev.dto.request.VerifyRequest;
 import com.funwithbackend.stream_dev.dto.response.AuthResponse;
 import com.funwithbackend.stream_dev.service.AuthService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -41,7 +41,7 @@ public class AuthController {
             // 1. Authenticate user using your existing service
             AuthResponse response = authService.login(request);
 
-            // Extract the token (Assuming AuthResponse is a record, use .token(), if it's a class use .getToken())
+            // Extract the token
             String jwt = response.token();
 
             System.out.println("✅ [CONTROLLER] Login successful, passing token to Gateway Header.");
@@ -63,11 +63,22 @@ public class AuthController {
     }
 
     @PostMapping("/verify")
-    public ResponseEntity<AuthResponse> verifyEmail(@RequestBody VerifyRequest request) {
+    public ResponseEntity<?> verifyEmail(@RequestBody VerifyRequest request) {
+        // 1. Verify the code
         authService.verifyEmail(request.email(), request.code());
 
-        // We don't send a token here either! We force them to officially log in now.
-        return ResponseEntity.ok(new AuthResponse("null", "Email verified successfully! You can now log in."));
+        // 2. Generate the token for auto-login
+        String jwt = authService.generateTokenForVerifiedUser(request.email());
+
+        System.out.println("✅ [CONTROLLER] Verification successful, auto-logging in user.");
+
+        // 3. Staple the JWT to the header exactly like the login endpoint
+        return ResponseEntity.ok()
+                .header(org.springframework.http.HttpHeaders.AUTHORIZATION, "Bearer " + jwt)
+                .body(Map.of(
+                        "status", "success",
+                        "message", "Email verified successfully! Welcome."
+                ));
     }
 
     @PostMapping("/logout")
@@ -94,19 +105,13 @@ public class AuthController {
         return ResponseEntity.ok(Map.of("message", "Successfully logged out."));
     }
 
-
     @GetMapping("/me")
     public ResponseEntity<?> getCurrentUser(Authentication authentication) {
-        // 1. If there is no token (or invalid token), return 401
-        if (authentication == null || !authentication.isAuthenticated()) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Not authenticated"));
-        }
+        // 1. Get the email from the validated JWT token
+        String email = authentication.getName();
 
-        // 2. If the Gateway successfully attached the token, return the user info!
-        return ResponseEntity.ok(Map.of(
-                "email", authentication.getName(),
-                // Safely grab the first role/authority the user has
-                "role", authentication.getAuthorities().iterator().next().getAuthority()
-        ));
+        // 2. Ask the AuthService to fetch and format the user's profile
+        // This completely removes the need to import User or UserRepository here!
+        return ResponseEntity.ok(authService.getCurrentUserProfile(email));
     }
 }

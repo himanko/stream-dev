@@ -24,7 +24,13 @@ public class GatewayRoutingConfig {
                         .filters(f -> f.filter(saveSessionFilter.apply(new SaveSessionFilter.Config())))
                         .uri("http://localhost:8081"))
 
-                // ROUTE 2: Logout (Deletes Redis Session)
+                // ROUTE 2: Verify Auto-Login (Also intercepts token and saves to Redis)
+                .route("auth-verify-route", r -> r
+                        .path("/api/auth/verify")
+                        .filters(f -> f.filter(saveSessionFilter.apply(new SaveSessionFilter.Config())))
+                        .uri("http://localhost:8081"))
+
+                // ROUTE 3: Logout (Deletes Redis Session)
                 .route("auth-logout-route", r -> r
                         .path("/api/auth/logout")
                         .filters(f -> f
@@ -33,7 +39,7 @@ public class GatewayRoutingConfig {
                         )
                         .uri("http://localhost:8081"))
 
-                // ROUTE 3: The Catch-All for everything else (/register, /me, etc)
+                // ROUTE 4: The Catch-All for everything else (/register, /me, etc)
                 .route("core-api-route", r -> r
                         .path("/api/**")
                         .filters(f -> f.filter(tokenRelayFilter.apply(new TokenRelayFilter.Config())))

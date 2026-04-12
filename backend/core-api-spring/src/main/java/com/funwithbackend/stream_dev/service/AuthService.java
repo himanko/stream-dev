@@ -20,6 +20,8 @@ import java.util.Random;
 
 import java.time.LocalDateTime;
 
+
+
 @Service
 @RequiredArgsConstructor
 public class AuthService {
@@ -67,6 +69,16 @@ public class AuthService {
         System.out.println("🏁 [MAIN THREAD] Registration method finished!");
     }
 
+    public String generateTokenForVerifiedUser(String email) {
+        // 1. Fetch the newly verified user from the database
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("User not found with email: " + email));
+
+        // 2. Generate the JWT using your existing JwtProvider!
+        return jwtProvider.generateToken(user.getEmail(), user.getRole().name());
+    }
+
+
     @Transactional
     public AuthResponse login(LoginRequest request) {
         System.out.println("🚀 [SERVICE] Login method started...");
@@ -89,6 +101,18 @@ public class AuthService {
         String token = jwtProvider.generateToken(user.getEmail(), user.getRole().name());
         return new AuthResponse(token, "Login successful!");
     }
+
+    public java.util.Map<String, Object> getCurrentUserProfile(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        return java.util.Map.of(
+                "email", user.getEmail(),
+                "fullName", user.getFullName(),
+                "role", user.getRole().name()
+        );
+    }
+
 
     @Transactional
     public void logout(String email, String jwtToken) {

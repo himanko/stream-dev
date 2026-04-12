@@ -11,11 +11,13 @@ import {
 } from "@/components/ui/card";
 import { AuthService } from "@/services/auth.service";
 import { AlertCircle, ArrowLeft, MailCheck } from "lucide-react";
+import { api } from "@/services/api"; // <-- 1. Import API
+import { useAuth } from "@/hooks/use-auth"; // <-- 2. Import Auth Hook
 
 export default function VerifyEmail() {
   const navigate = useNavigate();
+  const { login } = useAuth(); // <-- 3. Pull in the login function
 
-  // Grab the email directly from the URL (e.g., ?email=test@test.com)
   const [searchParams] = useSearchParams();
   const email = searchParams.get("email");
 
@@ -23,52 +25,42 @@ export default function VerifyEmail() {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
-  // Refs to manage the 6 input boxes
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
-  // Security: If no email is present in state, kick them back to sign-up
   useEffect(() => {
     if (!email) {
       navigate("/sign-up", { replace: true });
     }
   }, [email, navigate]);
 
-  // Handle typing a digit
   const handleChange = (index: number, value: string) => {
-    if (!/^\d*$/.test(value)) return; // Only allow numbers
-
+    if (!/^\d*$/.test(value)) return;
     const newCode = [...code];
-    newCode[index] = value.slice(-1); // Only keep the last digit typed
+    newCode[index] = value.slice(-1);
     setCode(newCode);
-
-    // Auto-focus the next box
     if (value && index < 5) {
       inputRefs.current[index + 1]?.focus();
     }
   };
 
-  // Handle Backspace
   const handleKeyDown = (index: number, e: React.KeyboardEvent) => {
     if (e.key === "Backspace" && !code[index] && index > 0) {
       inputRefs.current[index - 1]?.focus();
     }
   };
 
-  // Handle Pasting the full 6-digit code
   const handlePaste = (e: React.ClipboardEvent) => {
-    e.preventDefault(); // Prevent default paste behavior
+    e.preventDefault();
     const pastedData = e.clipboardData.getData("text").slice(0, 6);
     if (!/^\d+$/.test(pastedData)) return;
 
     const newCode = pastedData.split("");
-    // Fill as many boxes as we have digits for
     const updatedCode = [...code];
     newCode.forEach((char, idx) => {
       if (idx < 6) updatedCode[idx] = char;
     });
     setCode(updatedCode);
 
-    // Focus the last filled box or the 6th box
     const nextFocus = newCode.length < 6 ? newCode.length : 5;
     inputRefs.current[nextFocus]?.focus();
   };
@@ -77,7 +69,6 @@ export default function VerifyEmail() {
     e.preventDefault();
     const fullCode = code.join("");
 
-    // --- THE FIX: Prove to TypeScript that 'email' exists ---
     if (!email) {
       setErrorMsg("Missing email address. Please return to sign up.");
       return;
@@ -92,10 +83,16 @@ export default function VerifyEmail() {
     setErrorMsg("");
 
     try {
-      // Call your Spring Boot /api/auth/verify endpoint
+      // 1. Send the code. The Gateway intercepts the new JWT and gives the browser a Cookie!
       await AuthService.verifyEmail(email, fullCode);
 
-      // Success! Route them to the new Welcome page.
+      // 2. Fetch the user details using that brand new cookie
+      const userResponse = await api.get("/auth/me");
+
+      // 3. Update the global React state so the app knows we are officially logged in!
+      login(userResponse.data);
+
+      // 4. Success! Route them to the Welcome page (which is now protected).
       navigate("/welcome", { replace: true });
     } catch (error: unknown) {
       if (error instanceof Error) {
@@ -103,7 +100,6 @@ export default function VerifyEmail() {
       } else {
         setErrorMsg("Invalid code. Please check your email and try again.");
       }
-    } finally {
       setIsLoading(false);
     }
   };
@@ -132,7 +128,6 @@ export default function VerifyEmail() {
               {code.map((num, idx) => (
                 <input
                   key={idx}
-                  // --- THE FIX: Wrap the assignment in curly braces so it returns void ---
                   ref={(el) => {
                     inputRefs.current[idx] = el;
                   }}
